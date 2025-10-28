@@ -151,3 +151,23 @@ void UpdateNetworkClient()
         NBN_LogError("Failed to send packets. Exit");
     }
 }
+
+void HandleMessage()
+{
+    //Get info about the received message
+    NBN_MessageInfo msg_info = NBN_GameServer_GetMessageInfo();
+
+    assert(msg_info.sender == client);
+    assert(msg_info.type == NBN_BYTE_ARRAY_MESSAGE_TYPE);
+
+    //retrieve the received message
+    auto* msg = (NBN_ByteArrayMessage*)msg_info.data;
+
+    // If the send fails the client will be disconnected and a NBN_CLIENT_DISCONNECTED event
+    // will be received (see event polling in main)
+    if (NBN_GameServer_SendReliableByteArrayTo(client, msg->bytes, msg->length) < 0)
+    {
+        exit(-1);
+    }
+
+}

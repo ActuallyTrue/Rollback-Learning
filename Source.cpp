@@ -80,6 +80,12 @@ void UpdateEntity(unsigned int input, EntityState& entity)
     entity.Position.y += entity.Velocity.y;
 }
 
+void UpdateSimulation(SimulationState& GameState)
+{
+    UpdateEntity(GameState.Inputs[0], GameState.Entities[0]);
+    UpdateEntity(GameState.Inputs[1], GameState.Entities[1]);
+}
+
 int main() {
     plog::init<plog::TxtFormatter>(plog::verbose, plog::streamStdOut); // logs error and above to stderr
     NetworkState NetState = NetworkState::None;
@@ -90,6 +96,7 @@ int main() {
 
     SimulationState GameState;
 
+    //Set starting position of entities
     GameState.Entities[0].Position.x = -200;
     GameState.Entities[0].Position.y = 100;
 
@@ -108,7 +115,6 @@ int main() {
         {
             UpdateNetworkClient();
         }
-        GameState.Inputs[0] = 0;
 
         //Only check for starting host/client when the network isn't initialized already
         if (NetState == NetworkState::None)
@@ -130,32 +136,36 @@ int main() {
             }
         }
 
-        // Input Section
-        if (IsGamepadAvailable(0))
+        GameState.Inputs[0] = 0;
+        GameState.Inputs[1] = 0;
+
+        // UpdateInput
+        if (IsWindowFocused() && IsGamepadAvailable(0))
         {
+            int Entity = (NetState == NetworkState::Client) ? 1 : 0;
+
             if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_UP))
             {
-                GameState.Inputs[0] |= static_cast<unsigned int>(InputCommand::UP);
+                GameState.Inputs[Entity] |= static_cast<unsigned int>(InputCommand::UP);
             }
 
             if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN))
             {
-                GameState.Inputs[0] |= static_cast<unsigned int>(InputCommand::DOWN);
+                GameState.Inputs[Entity] |= static_cast<unsigned int>(InputCommand::DOWN);
             }
 
             if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT))
             {
-                GameState.Inputs[0] |= static_cast<unsigned int>(InputCommand::LEFT);
+                GameState.Inputs[Entity] |= static_cast<unsigned int>(InputCommand::LEFT);
             }
 
             if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT))
             {
-                GameState.Inputs[0] |= static_cast<unsigned int>(InputCommand::RIGHT);
+                GameState.Inputs[Entity] |= static_cast<unsigned int>(InputCommand::RIGHT);
             }
         }
 
-        UpdateEntity(GameState.Inputs[0], GameState.Entities[0]);
-        UpdateEntity(GameState.Inputs[1], GameState.Entities[1]);
+        UpdateSimulation(GameState);
 
         //Drawing
         {

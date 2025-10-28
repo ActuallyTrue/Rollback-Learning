@@ -8,3 +8,4 @@ bool InitializeHost();
 bool InitializeClient();
 void UpdateNetworkHost();
 void UpdateNetworkClient();
+void HandleMessage();
