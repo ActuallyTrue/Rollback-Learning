@@ -1,25 +1,14 @@
 #include "Network.h"
 #include "raylib.h"
+#include <plog/Initializers/ConsoleInitializer.h>
+#include "plog/Formatters/TxtFormatter.h"
 
-Vector2 lines[] = { Vector2 {50, 100}, Vector2 {60, 100}, Vector2 {60, 200} };
-const int HISTORY_SIZE = 60;
-
-int LatencyValuesForP1[HISTORY_SIZE];
-int LatencyValuesForP2[HISTORY_SIZE];
-
-int AverageLatencyValues[HISTORY_SIZE];
-
-int SyncValuesForP1[HISTORY_SIZE];
-
-Vector2 GraphPointsForP1[HISTORY_SIZE];
-Vector2 GraphPointsForP2[HISTORY_SIZE];
-
-Vector2 AveragePingGraphPoints[HISTORY_SIZE];
-
-Vector2 SyncGraphPoints[HISTORY_SIZE];
-
-const int GRAPH_SCALE_X = 15;
-const int GRAPH_SCALE_Y = 2;
+enum class NetworkState
+{
+    None,
+    Host,
+    Client
+};
 
 //Stores the entire input state for a given frame and player.
 //These are all a power of 2 so that bitwise or operations can be done with them
@@ -92,8 +81,8 @@ void UpdateEntity(unsigned int input, EntityState& entity)
 }
 
 int main() {
-
-    InitializeHost();
+    plog::init<plog::TxtFormatter>(plog::verbose, plog::streamStdOut); // logs error and above to stderr
+    NetworkState NetState = NetworkState::None;
 
     InitWindow(1080, 758, "Rollback Test");
 
@@ -112,7 +101,35 @@ int main() {
 
     while (WindowShouldClose() == false)
     {
+        if (NetState == NetworkState::Host)
+        {
+            UpdateNetworkHost();
+        } else if (NetState == NetworkState::Client)
+        {
+            UpdateNetworkClient();
+        }
         GameState.Inputs[0] = 0;
+
+        //Only check for starting host/client when the network isn't initialized already
+        if (NetState == NetworkState::None)
+        {
+            if (IsKeyDown(KEY_F1))
+            {
+                if (InitializeHost())
+                {
+                    NetState = NetworkState::Host;
+                }
+            }
+
+            if (IsKeyDown(KEY_F2))
+            {
+                if (InitializeClient())
+                {
+                    NetState = NetworkState::Client;
+                }
+            }
+        }
+
         // Input Section
         if (IsGamepadAvailable(0))
         {

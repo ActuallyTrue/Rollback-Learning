@@ -3,33 +3,151 @@
 
 #define NBNET_IMPL
 
-#define NBN_LogInfo(...) LOG_INFO << __VA_ARGS__;
-#define NBN_LogError(...) LOG_ERROR << __VA_ARGS__;
-#define NBN_LogDebug(...) LOG_DEBUG << __VA_ARGS__;
-#define NBN_LogTrace(...) LOG_INFO << __VA_ARGS__;
-#define NBN_LogWarning(...) LOG_WARNING << __VA_ARGS__;
+#define NBN_LogInfo(...) PLOG_INFO << __VA_ARGS__;
+#define NBN_LogError(...) PLOG_ERROR << __VA_ARGS__;
+#define NBN_LogDebug(...) PLOG_DEBUG << __VA_ARGS__;
+#define NBN_LogTrace(...) PLOG_INFO << __VA_ARGS__;
+#define NBN_LogWarning(...) PLOG_WARNING << __VA_ARGS__;
 
 #define HOST_PORT 50101
+#define PROTOCOL_NAME "Rollback Test"
 
 
 #include "nbnet.h"
 #include "net_drivers/udp.h"
 
-static NBN_Connection* client = NULL;
+static NBN_ConnectionHandle client = 0;
 
 bool InitializeHost()
 {
+    NBN_UDP_Register();
     //Start the server
-    if (NBN_GameServer_Start("Rollback Test", HOST_PORT) < 0)
+    if (NBN_GameServer_Start(PROTOCOL_NAME, HOST_PORT) < 0)
     {
-        //NET_LOG("Failed to start the server!");
+        NBN_LogInfo("Failed to start the server!");
 
         //Deinit server
         NBN_GameServer_Stop();
 
         //Error, quit the server application
-        return true;
+        return false;
     }
 
-    return false;
+    NBN_LogInfo("Started Hosting\n");
+
+    return true;
+}
+
+bool InitializeClient()
+{
+    NBN_UDP_Register();
+
+    if (NBN_GameClient_Start( PROTOCOL_NAME, "127.0.0.1", HOST_PORT) < 0)
+    {
+        NBN_LogError("Failed to start the client!");
+        NBN_GameClient_Stop();
+        return false;
+    }
+
+    NBN_LogInfo("Connected to Host!\n");
+
+    return true;
+}
+
+void UpdateNetworkHost()
+{
+    int ev;
+
+    // Poll for server events
+    while ((ev = NBN_GameServer_Poll()) != NBN_NO_EVENT)
+    {
+        if (ev < 0)
+        {
+            NBN_LogError("Network Error");
+
+            // Error, quit the server application
+            exit(-1);
+            break;
+        }
+
+        switch (ev)
+        {
+            // New connection request...
+            case NBN_NEW_CONNECTION:
+                if (client == 0)
+                {
+                    NBN_GameServer_AcceptIncomingConnection();
+                    client = NBN_GameServer_GetIncomingConnection();
+                    NBN_LogInfo("Accepted Client Connection!");
+                }
+                break;
+                //
+                //     // The client has disconnected
+                // case NBN_CLIENT_DISCONNECTED:
+                //     assert(NBN_GameServer_GetDisconnectedClient() == client);
+                //
+                //     client = 0;
+                //     break;
+                //
+                //     // A message has been received from the client
+                // case NBN_CLIENT_MESSAGE_RECEIVED:
+                //     if (EchoReceivedMessage() < 0)
+                //     {
+                //         NBN_LogError("Failed to echo received message");
+                //
+                //         // Error, quit the server application
+                //         exit(-1);
+                //     }
+                //     break;
+        }
+    }
+
+    // Pack all enqueued messages as packets and send them
+    if (NBN_GameServer_SendPackets() < 0)
+    {
+        NBN_LogError("Failed to send packets");
+
+        // Error, quit the server application
+        exit(-1);
+    }
+}
+
+void UpdateNetworkClient()
+{
+    int ev;
+
+    // Poll for client events
+    while ((ev = NBN_GameClient_Poll()) != NBN_NO_EVENT)
+    {
+        if (ev < 0)
+        {
+            NBN_LogError("An error occured while polling client events. Exit");
+            exit(-1);
+        }
+
+        switch (ev)
+        {
+            // Client is connected to the server
+            case NBN_CONNECTED:
+                //OnConnected();
+                NBN_LogInfo("Connected to host!");
+                break;
+            //
+            //     // Client has disconnected from the server
+            // case NBN_DISCONNECTED:
+            //     OnDisconnected();
+            //     break;
+            //
+            //     // A message has been received from the server
+            // case NBN_MESSAGE_RECEIVED:
+            //     OnMessageReceived();
+            //     break;
+        }
+    }
+
+    // Pack all enqueued messages as packets and send them
+    if (NBN_GameClient_SendPackets() < 0)
+    {
+        NBN_LogError("Failed to send packets. Exit");
+    }
 }
