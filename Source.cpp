@@ -87,7 +87,7 @@ void UpdateSimulation(SimulationState& GameState)
 }
 
 int main() {
-    plog::init<plog::TxtFormatter>(plog::verbose, plog::streamStdOut); // logs error and above to stderr
+    plog::init<plog::TxtFormatter>(plog::warning, plog::streamStdOut); // logs error and above to stderr
     NetworkState NetState = NetworkState::None;
 
     InitWindow(1080, 758, "Rollback Test");

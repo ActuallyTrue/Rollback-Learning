@@ -9,3 +9,4 @@ bool InitializeClient();
 void UpdateNetworkHost();
 void UpdateNetworkClient();
 void HandleMessage();
+void SendDebugMessage();

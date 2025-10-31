@@ -81,23 +81,16 @@ void UpdateNetworkHost()
                     NBN_LogInfo("Accepted Client Connection!");
                 }
                 break;
+                    // A message has been received from the client
+                case NBN_CLIENT_MESSAGE_RECEIVED:
+                    HandleMessage();
+                break;
                 //
                 //     // The client has disconnected
                 // case NBN_CLIENT_DISCONNECTED:
                 //     assert(NBN_GameServer_GetDisconnectedClient() == client);
                 //
                 //     client = 0;
-                //     break;
-                //
-                //     // A message has been received from the client
-                // case NBN_CLIENT_MESSAGE_RECEIVED:
-                //     if (EchoReceivedMessage() < 0)
-                //     {
-                //         NBN_LogError("Failed to echo received message");
-                //
-                //         // Error, quit the server application
-                //         exit(-1);
-                //     }
                 //     break;
         }
     }
@@ -114,6 +107,7 @@ void UpdateNetworkHost()
 
 void UpdateNetworkClient()
 {
+    SendDebugMessage();
     int ev;
 
     // Poll for client events
@@ -132,16 +126,16 @@ void UpdateNetworkClient()
                 //OnConnected();
                 NBN_LogInfo("Connected to host!");
                 break;
+                // A message has been received from the server
+            case NBN_MESSAGE_RECEIVED:
+                HandleMessage();
+                break;
             //
             //     // Client has disconnected from the server
             // case NBN_DISCONNECTED:
             //     OnDisconnected();
             //     break;
             //
-            //     // A message has been received from the server
-            // case NBN_MESSAGE_RECEIVED:
-            //     OnMessageReceived();
-            //     break;
         }
     }
 
@@ -161,13 +155,21 @@ void HandleMessage()
     assert(msg_info.type == NBN_BYTE_ARRAY_MESSAGE_TYPE);
 
     //retrieve the received message
-    auto* msg = (NBN_ByteArrayMessage*)msg_info.data;
+    auto* msg = (char*)msg_info.data;
 
-    // If the send fails the client will be disconnected and a NBN_CLIENT_DISCONNECTED event
-    // will be received (see event polling in main)
-    if (NBN_GameServer_SendReliableByteArrayTo(client, msg->bytes, msg->length) < 0)
+    NBN_LogWarning(msg);
+
+    //NBN_ByteArrayMessage_Destroy(msg);
+}
+
+void SendDebugMessage()
+{
+    const char* test_message = "Testing our packets!";
+    unsigned int length = strlen(test_message);
+
+    if (NBN_GameClient_SendUnreliableByteArray((uint8_t*)test_message, length) < 0)
     {
+        NBN_LogError("Failed to send outgoing message!");
         exit(-1);
     }
-
 }
